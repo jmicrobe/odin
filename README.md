@@ -1,4 +1,4 @@
-# ODIn (Optical Density Investigation)
+# ODIn (Optical Density Instrument)
 
 Repo for documentation related to the Optical Density Instrument at the Stahl lab
 
@@ -10,9 +10,11 @@ After setting up [ssh keys](https://help.github.com/articles/generating-a-new-ss
 
 ## Introduction
 
-A method of measuring microbial growth is done by measuring the change of turbity over time. This device is designed to take continuous measurements of turbity using and infrared feedback loop as the cultures are being shaken on a platform inside 64 pressurized batch culture growth vessels. The optical density will automatically get sent to a database to be easily accessed for observation.
+A common technique in microbiology is the use of optical density to measure the growth of liquid microbial culture over time. As the number of cells in a culture grows, the optical density, or the amount of light that is scattered when passed through the culture tube, will increase. These measurements can be taken by hand using a spectrophotometer or by using a high-throughput well plate reader device. Plate readers are effective for studying growth in the presence of oxygen, however for microbes requiring anaerobic conditions plate readers are sub-optimal.
 
-## Apparatus Environment Implecations
+The ODIn is designed to take continuous measurements of growing anerobic cultures using an infrared feedback loop. During an experiment samples are shaken on a platform that holds racks containing up to 64 anaerobic "Balch-type" culture tubes. Measurements of the infrared signal strength are reported in milliamperes and automatically sent to a database for easy access and observation. In addition to the ODIn's capability for high-throughput measurements over an extended time, the larger culture volume capacity of the ODIn compared to traditional well plate readers allows for more flexibility in chemical testing of the samples. 
+
+## Apparatus Environment Implications
 > Ex: necessary temperature to operate. LEDs, phototransistor, microprocessing etc
 
 ## Setup Arduino
@@ -45,7 +47,7 @@ Sends data to the database. [Ethernet Shield](https://store.arduino.cc/arduino-e
 
 > TODO find out how to do this. Issue #1
 
-### Resitor selections
+### Resistor selections
 
 > TODO this appeared to be described in the original docs, so here's a placeholder
 
@@ -60,4 +62,3 @@ Sends data to the database. [Ethernet Shield](https://store.arduino.cc/arduino-e
 ## Credits
 
 > TODO Get every name that deserves love!
-
