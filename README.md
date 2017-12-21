@@ -53,7 +53,10 @@ Sends data to the database. [Ethernet Shield](https://store.arduino.cc/arduino-e
 
 ## Bill of Materials
 
-> TODO issue #9
+| Item | Datasheet | Quantity | Price per unit | cost |
+| --- | --- | --- | --- | --- |
+| Arduino Mega | --- | 1 | $45.95 | $45.95|
+
 
 ## References
 
