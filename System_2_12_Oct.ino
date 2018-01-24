@@ -764,7 +764,7 @@ String trimStringEndToTwentyChars(String msg)
   return msg;
 }
 
-// Returns a 20 character String, the first part containing the passed String, with the remainder filled with spaces
+// Returns a String of desired length containing a desired String appended with spaces until a desired length has been reached
 String fillStringEndWithVariableWhitespace(String msg, int desired_length)
 {
   int string_length = msg.length();
