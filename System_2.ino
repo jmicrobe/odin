@@ -41,15 +41,15 @@ int debug_mode_backlight[]   = {255, 255, 0  };   // Appears RED    Debug mode R
 // Also, don't exceed about 71,500 minutes (about 7 weeks), as that is about the capacity of an unsigned long in milliseconds.
 // More to that point, the experiment shouldn't last longer than 7.1 weeks, due to the capacity of the unsigned long which is used by the millis() system function.
 // Running the experiment past this point may work, but could exhibit some undefined behavior.
-const int data_sampling_interval_1 = 5;
+const int data_sampling_interval_1 = 10;
 const int data_sampling_interval_2 = 20;
-const int data_sampling_interval_3 = 60;
-const int data_sampling_interval_4 = 120;
+const int data_sampling_interval_3 = 40;
+const int data_sampling_interval_4 = 60;
 
 const int channels = 64;                       // channels in use, up to 64
 const int channelstart = 0;                    // the first channel to probe (normally 0);
 const int addr_bits = 3;                       // number of bits required to encode (2^3=8, and we're using an 8-bit multiplexer)
-const int adc_samples = 20;                    // number of repeated adc samples per each scan of each test tube, there can be an occasional spike in reading, this evens it out, but too much slows down the sampling
+const int adc_samples = 40;                    // number of repeated adc samples per each scan of each test tube, there can be an occasional spike in reading, this evens it out, but too much slows down the sampling
 
 const int mux_addr_pins[] = {39, 40, 41};      // pins on the arduino for addressing the multiplexer (picking which channel for the multiplexer to output)
 const int mux_enablenot_pin = 38;              // pin on the arduino for controlling the multiplexer NOT enable, when this pin is high the multiplexer is disabled, when low it is enabled
@@ -73,7 +73,7 @@ const int SD_Card_not_physically_detected = 31;    // input pin which reads the 
 
 const unsigned long channel_select_delay_ms = 20;  // time to allow the multiplexer to settle after channel selection in milliseconds
 const unsigned long shaker_shutdown_ms = 8000;     // time in milliseconds to allow shaker table to stop moving after being shut off by relay
-unsigned long timestep = 120000;                   // time in milliseconds between scans, the data sampling interval (don't change this, change "data_sampling_interval" above), initialized to the minimum time sampling interval of 2 minutes (in milliseconds)
+unsigned long timestep = data_sampling_interval_4 * 60000; // time in milliseconds between scans, the data sampling interval (don't change this, change "data_sampling_interval" above), initialized to the longest time sampling interval above
 
 unsigned long start_time;                      // keeps track of how long the system took to perform all setup operations, so that time can be deducted from the total system time reported to the server in each loop iteration
 File myFile;                                   // this is the variable that represents the file being written to the SD card containing experiment data
@@ -367,11 +367,11 @@ void debug_loop()
     } 
 	else if (count == 2)
 	{
-	  lcdDebugPrint(3, 2, tube_data);
+	  lcdDebugPrint(3, 1, tube_data);
     } 
 	else if (count == 3)
 	{
-	  lcdDebugPrint(3, 1, tube_data);
+	  lcdDebugPrint(3, 2, tube_data);
     } 
 	else if (count == 4)
 	{
@@ -383,11 +383,11 @@ void debug_loop()
     } 
 	else if (count == 6)
 	{
-	  lcdDebugPrint(14, 2, tube_data);
+	  lcdDebugPrint(14, 1, tube_data);
     } 
 	else if (count == 7)
 	{
-	  lcdDebugPrint(14, 1, tube_data);
+	  lcdDebugPrint(14, 2, tube_data);
     } 
 	else // must be 8 then
 	{
@@ -495,7 +495,7 @@ int adc_read(int channel)
   //  double low = 100000.0;        // keeps track of the lowest value read by the ADC for this channel, during this sampling, initialized to a very high value so the first reading will replace it
   //  double high = 0.0;            // keeps track of the highest value read by the ADC for this channel, during this sampling
   double current_read;          // stores each ADC reading as they occur
-  for (int8_t k = 0; k < adc_samples; k++) // take as many readings as specified by the constant "adc_samples", extra readings are sometimes required in order to smooth out anomolous readings
+  for (unsigned int k = 0; k < adc_samples; k++) // take as many readings as specified by the constant "adc_samples", extra readings are sometimes required in order to smooth out anomolous readings
   {
     if (channel / 8 < 4)        // determine which of the two ADC chips to read, and which channel on those chips to read for each of the tubes being read
 	{
@@ -579,6 +579,7 @@ void write_data_to_SD_card()
 // Sends the data packet to the server via the Ethernet Shield
 void sendpacket(boolean on)
 {
+    Serial.println("Sending data via Ethernet.");
     if(on){
       // the data structure was filled during the scan, now create a udp packet and send it
       udp.beginPacket(data_server_ip, data_server_port);
@@ -616,7 +617,7 @@ void raise_platform()
   
   actuator_position = analogRead(A2); // read the actuator position
   motor_run_time = millis(); // save the time when the motor started extending
-  while((millis() - motor_run_time) < 60000)  // run motor until 60 seconds has elapsed (to clear bubbles)
+  while((millis() - motor_run_time) < 120000)  // run motor until 120 seconds has elapsed (to clear bubbles)
   {
     actuator_position = analogRead(A2); // read the actuator position
     actuator_current = analogRead(A3); // read the current going to the motor
@@ -627,6 +628,7 @@ void raise_platform()
       while(1){} // pause forever (there needs to be programmed a way to gracefully recover from this situation)
     }
   }
+  digitalWrite(Motor_En_Pin, LOW); // disable the motor
   Serial.print("Actuator Position: ");
   actuator_position = analogRead(A2); // read the actuator position
   Serial.println(actuator_position);
@@ -653,6 +655,7 @@ void lower_platform()
       while(1){} // pause forever (there needs to be programmed a way to gracefully recover from this situation)
     }
   }
+  digitalWrite(Motor_En_Pin, LOW); // disable the motor
   Serial.print("Actuator Position: ");
   actuator_position = analogRead(A2); // read the actuator position
   Serial.println(actuator_position);
@@ -764,7 +767,7 @@ String trimStringEndToTwentyChars(String msg)
   return msg;
 }
 
-// Returns a String of desired length containing a desired String appended with spaces until a desired length has been reached
+// Returns a 20 character String, the first part containing the passed String, with the remainder filled with spaces
 String fillStringEndWithVariableWhitespace(String msg, int desired_length)
 {
   int string_length = msg.length();
@@ -969,43 +972,39 @@ void checkFourChannelFlag()
 // Checks the 8-ch rotary knob and sets the tube box to take continuous readings from in debug mode to that which is set by the knob, if the eight_channel_flag is set
 void checkEightChannelFlag()
 {
-  if(eight_channel_flag == 1) // if the flag was set (by the 8-ch interrupt)
+  int voltage = analogRead(A1); // read the voltage from the 8-ch rotary switch voltage ladder
+  // Determine the tube box set by the voltage read, set the tube box to be interrogated by the debug loop to the one set by the user
+  if(voltage < 906)
   {
-    eight_channel_flag = 0; // reset the flag
-    int voltage = analogRead(A1); // read the voltage from the 8-ch rotary switch voltage ladder
-	// Determine the tube box set by the voltage read, set the tube box to be interrogated by the debug loop to the one set by the user
-    if(voltage < 906)
-    {
-      eight_position_channel = 8;
-    }
-    else if(voltage < 924)
-    {
-      eight_position_channel = 7;
-    }
-    else if(voltage < 942)
-    {
-      eight_position_channel = 6;
-    }
-    else if(voltage < 960)
-    {
-      eight_position_channel = 5;
-    }
-    else if(voltage < 978)
-    {
-      eight_position_channel = 4;
-    }
-    else if(voltage < 997)
-    {
-      eight_position_channel = 3;
-    }
-    else if(voltage < 1015)
-    {
-      eight_position_channel = 2;
-    }
-    else
-    {
-      eight_position_channel = 1;
-    }
+    eight_position_channel = 8;
+  }
+  else if(voltage < 924)
+  {
+    eight_position_channel = 7;
+  }
+  else if(voltage < 942)
+  {
+    eight_position_channel = 6;
+  }
+  else if(voltage < 960)
+  {
+    eight_position_channel = 5;
+  }
+  else if(voltage < 978)
+  {
+    eight_position_channel = 4;
+  }
+  else if(voltage < 997)
+  {
+    eight_position_channel = 3;
+  }
+  else if(voltage < 1015)
+  {
+    eight_position_channel = 2;
+  }
+  else
+  {
+    eight_position_channel = 1;
   }
 }
 
@@ -1016,6 +1015,7 @@ void four_channel_isr()
 }
 
 // Sets the eight_channel_flag upon 8-ch switch interrupt interception
+// DEPRECATED, no longer in use because the interrupt has become faulty.
 void eight_channel_isr()
 {
   eight_channel_flag = 1;
