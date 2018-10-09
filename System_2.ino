@@ -237,6 +237,22 @@ void setup()
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
+  
+  // Get the current date & time from the RTC.
+  DateTime now = rtc.now();
+  // Print the current date & time for RTC debug purposes if necessary.
+  Serial.println("RTC current datetime:");
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  Serial.print(now.day(), DEC);
+  Serial.print(' ');
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.println(now.second(), DEC);
 
   set_critical_section_mode(); // sets the system to "critical section" mode, which disables interrupts so that nothing will bother the sensitive operations that follow
   initializeSDCardFile(); // determines if SD Card writing is possible, and comes up with a unique filename to use for this system session
