@@ -2,7 +2,7 @@
   Software for Optical Density INvestigator
   System 2
   Written by Jonathan Forbes
-  Last updated Oct 21, 2016 (Jonathan Forbes)
+  Last updated Oct 9, 2018 (Jonathan Forbes)
   Based on System 1 (ROGR) software written by Bob Petersen and David Beck
 */
 
@@ -562,9 +562,22 @@ void write_data_to_SD_card()
       Serial.print(filename);
       Serial.print("...");
       lcdPrint("Writing to",filename,"...","");
-      //myFile.println("testing 1, 2, 3.");
+      
+      DateTime now = rtc.now(); // Get the current Date/Time as perceived by the real-time-clock
+      myFile.print(now.year(), DEC);
+      myFile.print('/');
+      myFile.print(now.month(), DEC);
+      myFile.print('/');
+      myFile.print(now.day(), DEC);
+      myFile.print(' ');
+      myFile.print(now.hour(), DEC);
+      myFile.print(':');
+      myFile.print(now.minute(), DEC);
+      myFile.print(':');
+      myFile.print(now.second(), DEC);
+      myFile.print(",");              // write a comma to the file (so it imports to excel better)
       myFile.print(data.time);        // write the experiment time (in milliseconds) to the file
-      myFile.print(",");              // write a tab to the file (so it imports to excel better)
+      myFile.print(",");              // print the comma separation
       for (int i = 0; i < 64; i++)
 	  {
         myFile.print(data.adc[i]);    // write the channel data to the file
