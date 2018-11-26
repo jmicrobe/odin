@@ -5,7 +5,7 @@
 ** dacb@uw.edu
 ** Original:
 **	Mon Apr 1 10:30:16 PDT 2013
-** Modified:
+** Modified: Nov 23 2018 Jessica Hardwicke
 *******************************************************************************/
 
 #include <sys/socket.h>
@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <strings.h>
+#include <string.h> /* memset */
 
 #include "packet.h"
 

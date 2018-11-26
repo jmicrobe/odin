@@ -2,7 +2,7 @@
   Software for Optical Density INvestigator
   System 2
   Written by Jonathan Forbes
-  Last updated Oct 9, 2018 (Jonathan Forbes)
+  Last updated Nov 23, 2018 (Jessica Hardwicke)
   Based on System 1 (ROGR) software written by Bob Petersen and David Beck
 */
 
@@ -86,7 +86,7 @@ RTC_DS1307 rtc;                                // variable which represents the 
 struct data {                                  // data structure that will be sent via UDP to the server, containing a single data sampling
   unsigned long time;                          // the time, since the end of system setup, in milliseconds, of the data sampling
   int adc[64];                                 // 64 integer values corresponding to the optical density of each emitter sensor unit as reported by the ADC
-} 
+}
 data;
 
 int calibration_voltage[64];                   // each calibration voltage (in terms of DAC set points 0<->4095) for emitter sensor sampling unit
@@ -102,13 +102,13 @@ volatile int pause_button_flag = 1;            // Signals that the pause button 
 boolean paused = false;                        // Keeps track of the pause state of the system.
                                                // Start the system in paused mode to let the LED's come up to temperature before calibrating and sending data to the server.
 											   // Paused = FALSE here because the pause check will assume the system is coming from an unpaused state to begin the pause
-											   
+
 boolean debug_mode;                            // Keeps track of the debug mode status of the system.
 String ram;                                    // String to store the RAM status for periodic display (for debug purposes)
 
 const boolean ethernetstatus = true;           // Set to true if sending data to the server via Ethernet is desired
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };  // MAC address for device (must be unique!)
-IPAddress data_server_ip(128, 208, 236, 38);                // IP of remote host that will receive the data
+IPAddress data_server_ip(128, 208, 236, 146);                // IP of remote host that will receive the data
 const uint16_t data_server_port = 8577;                     // must be unique!
 EthernetUDP udp;                                            // UDP instance for sending & receiving
 const int PACKET_SIZE = sizeof(struct data);
@@ -117,7 +117,7 @@ const int PACKET_SIZE = sizeof(struct data);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Sets up system functions, runs once at system start
-void setup() 
+void setup()
 {
   Serial.begin(115200); // starts serial communications (not related to SPI or I2C)
   lcd.setMCPType(LTI_TYPE_MCP23008); // must be called before lcd.begin(20,4), tells the lcd library which type of lcd controller is being used
@@ -148,7 +148,7 @@ void setup()
   // so FileMakerPro can tell which tubes are in active use if all 64 values are sent, but only some are written to. (Not currently a feature, programming ahead)
   for (int k = 0; k < 64; k++)
   {
-    data.adc[k] = -1;             
+    data.adc[k] = -1;
   }
   // Configure the Ethernet Shield to send UDP data packets to the server
   if(ethernetstatus)
@@ -215,7 +215,7 @@ void setup()
 
   rtc.begin(); // begin the real-time-clock
   set_LCD_Color(normal_backlight); // set normal operating mode backlighting on the LCD
-  
+
   pinMode(SS, OUTPUT); // set the SPI Slave Select pin on the Arduino as output
   // set the two SD Card check pins as Input Pullup, in order to avoid electrical "floating" (only way they work, they need this high resistance connection to ground)
   pinMode(SD_Card_write_protected_or_missing, INPUT_PULLUP);
@@ -237,7 +237,7 @@ void setup()
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
-  
+
   // Get the current date & time from the RTC.
   DateTime now = rtc.now();
   // Print the current date & time for RTC debug purposes if necessary.
@@ -285,7 +285,7 @@ void calibrate()
   int best_calibration_voltage;
 
   // Start calibrating all channels!
-  for (int k = 0; k < channels - channelstart; k++) // k is the number of channels to calibrate (minus one) 
+  for (int k = 0; k < channels - channelstart; k++) // k is the number of channels to calibrate (minus one)
   {
     Serial.print("\nChannel ");
     Serial.println(k + channelstart);
@@ -333,7 +333,7 @@ void calibrate()
 	  {
         high = mid;
         mid = (low + high) / 2;
-      } 
+      }
       else // if the output value is greater than 1600, then narrow the range by only considering values below the DAC value tested
 	  {
         low = mid;
@@ -356,7 +356,7 @@ void calibrate()
 
   write_data_to_SD_card(); // write the calibration values to the SD card in the guise of the first packet sent, this is for debugging purposes
   delay(1000); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
-	
+
   sendpacket(ethernetstatus); // send the calibration values to the server via the Ethernet Shield
   delay(1000); // give the system a second to ensure all SPI bus operations have completed
 }
@@ -383,31 +383,31 @@ void debug_loop()
     if (count == 1)
 	{
 	  lcdDebugPrint(3, 0, tube_data);
-    } 
+    }
 	else if (count == 2)
 	{
 	  lcdDebugPrint(3, 1, tube_data);
-    } 
+    }
 	else if (count == 3)
 	{
 	  lcdDebugPrint(3, 2, tube_data);
-    } 
+    }
 	else if (count == 4)
 	{
 	  lcdDebugPrint(3, 3, tube_data);
-    } 
+    }
 	else if (count == 5)
 	{
 	  lcdDebugPrint(14, 0, tube_data);
-    } 
+    }
 	else if (count == 6)
 	{
 	  lcdDebugPrint(14, 1, tube_data);
-    } 
+    }
 	else if (count == 7)
 	{
 	  lcdDebugPrint(14, 2, tube_data);
-    } 
+    }
 	else // must be 8 then
 	{
 	  lcdDebugPrint(14, 3, tube_data);
@@ -455,10 +455,10 @@ void loop() {
   Serial.println("\n");
   write_data_to_SD_card(); // writes to the SD card first in case things take awhile with the WiFi
   delay(1000); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
-  
+
   sendpacket(ethernetstatus); // send the data packet to the server via the Ethernet Shield
   delay(1000); // give the system a second to ensure all SPI bus operations have completed
-  
+
   Serial.println("Lowering Platform");
   lcd3LinePrint("Lowering the","       Platform","");
   lower_platform(); // lower the lifting platform so that shaking can commence
@@ -468,19 +468,19 @@ void loop() {
   scan_time = millis() - scan_time;     // compute time elapsed to shut down shaker, take readings and output
   printdelayinfo(scan_time);            // prints to Serial details of the scan timing intervals
   Serial.println("waiting until next sampling time");
-  
+
   pause_button_flag = 0; // clear any presses that might have occurred during the sampling (could be spurious)
-  
+
   resume_normal_mode(); // re-enable interrupts, as the system is no longer in "critical-section" mode
-  
+
   unsigned long scan_end_time = millis(); // record the system time when sampling operations were complete
-  
+
   // shake while the system time is less than the time recorded at the end of the last sampling run, plus the data interval, minus the time it takes to sample the data
   while(millis() < (scan_end_time + (timestep - scan_time)))
   {
     checkFourChannelFlag(); // check to see if a new data sampling interval has been set
     //checkPauseButton(); // check to see if the pause button has been pressed
-	
+
 	/*
 	// System pause loop, shuts down the shaker table, and waits for the pause button to be pressed again
     if (paused)
@@ -492,13 +492,13 @@ void loop() {
     }
     delay(100); // wait a small moment so the LCD doesn't flash so fast it is unreadable...
 	*/
-    
+
 	// Output the remaining time to the display, which is in milliseconds
     String lcd_loop_first_line = "";
     lcd_loop_first_line += "Interval Mins: ";
     lcd_loop_first_line += (timestep/60000); // Display the interval time in minutes
     lcd3LinePrint(lcd_loop_first_line, "Remaining Millisecs", String((scan_end_time + (timestep - scan_time)) - millis())); // This *could* be set to seconds/minutes/etc. by dividing the calculated number inside the string cast by the appropriate constant
-	
+
     checkFourChannelFlag(); // check if the user changed the data sampling interval while the system was paused, this is the last chance before the loop can potentially end and the system takes another sample
   }
   set_critical_section_mode(); // since the waiting/shaking period is over and the loop is set to begin anew, disable all interrupts as the system is once again in "critical-section" mode
@@ -553,7 +553,7 @@ void write_data_to_SD_card()
   // Check if the SD card is physically present, and not write protected
   write_protected_or_missing = digitalRead(SD_Card_write_protected_or_missing);
   card_not_physically_detected = digitalRead(SD_Card_not_physically_detected);
-  
+
   // if writing to the SD Card is possible, and the system is set for it (write_to_SD_card = true), perform the write
   if (write_to_SD_card && !write_protected_or_missing && !card_not_physically_detected)
   {
@@ -566,7 +566,7 @@ void write_data_to_SD_card()
       Serial.print(filename);
       Serial.print("...");
       lcdPrint("Writing to",filename,"...","");
-      
+
       DateTime now = rtc.now(); // Get the current Date/Time as perceived by the real-time-clock
       myFile.print(now.year(), DEC);
       myFile.print('/');
@@ -591,7 +591,7 @@ void write_data_to_SD_card()
       myFile.close(); // close the file:
       Serial.println("done.");
       lcdPrint("Done.","","","");
-    } 
+    }
     else
     {
       // if the file didn't open, print an error to Serial:
@@ -599,7 +599,7 @@ void write_data_to_SD_card()
       Serial.println(filename);
       lcdPrint("Error opening",filename,"","");
     }
-  } 
+  }
   // SD Card is either missing, or write protected, or the system isn't set to write to the SD Card (write_to_SD_card = false)
   else
   {
@@ -615,7 +615,7 @@ void sendpacket(boolean on)
     if(on){
       Serial.println("Sending data via Ethernet.");
       lcdPrint("Sending data","via Ethernet","","");
-	    
+
       // the data structure was filled during the scan, now create a udp packet and send it
       udp.beginPacket(data_server_ip, data_server_port);
       udp.write((byte *)&data, PACKET_SIZE);
@@ -649,7 +649,7 @@ void raise_platform()
   // extend the linear actuator, lifting the table (a limit switch on the linear actuator will automatically stop the motor when fully extended)
   digitalWrite(Mtr_In_1_4_Pin, HIGH);
   digitalWrite(Mtr_In_2_3_Pin, LOW);
-  
+
   actuator_position = analogRead(A2); // read the actuator position
   motor_run_time = millis(); // save the time when the motor started extending
   while((millis() - motor_run_time) < 120000)  // run motor until 120 seconds has elapsed (to clear bubbles)
@@ -676,7 +676,7 @@ void lower_platform()
   // retract the linear actuator, lowering the table (a limit switch on the linear actuator will automatically stop the motor when fully retracted)
   digitalWrite(Mtr_In_1_4_Pin, LOW);
   digitalWrite(Mtr_In_2_3_Pin, HIGH);
-  
+
   actuator_position = analogRead(A2); // read the actuator position
   motor_run_time = millis(); // save the time when the motor started extending
   while((millis() - motor_run_time) < 20000)  // run motor until 20 seconds has elapsed (to park it before enabling the shaker table)
@@ -708,7 +708,7 @@ void printdelayinfo(unsigned long scan_time)
   Serial.println("");
   Serial.print("The delay time is ");
   Serial.print(timestep - scan_time);
-  Serial.println(""); 
+  Serial.println("");
 }
 
 // Sets the multiplexer channel select pins to the channel passed
@@ -827,7 +827,7 @@ void initializeSDCardFile()
   // Determine if the SD Card is physically present and non write-protected
   write_protected_or_missing = digitalRead(SD_Card_write_protected_or_missing);
   card_not_physically_detected = digitalRead(SD_Card_not_physically_detected);
-  
+
   // If the SD Card is not absent and not write-protected then begin communication with it
   if (!write_protected_or_missing && !card_not_physically_detected)
   {
@@ -837,7 +837,7 @@ void initializeSDCardFile()
 	{
       Serial.println("SD Card initialization failed!");
       lcdPrint("initialization","failed!","","");
-    } 
+    }
     else
 	{
       Serial.println("initialization done.");
@@ -894,7 +894,7 @@ void initializeSDCardFile()
       }
       write_to_SD_card = true; // set the system to write to this file in the future
     }
-  } 
+  }
   else
   {
     Serial.println("SD Card write-protected or missing, skipping write to SD Card");
@@ -1000,7 +1000,7 @@ void checkFourChannelFlag()
     {
       lcd3LinePrint("Interval", String(data_sampling_interval_1), "");
       timestep = data_sampling_interval_1 * 60000;
-    }   
+    }
   }
 }
 
@@ -1055,9 +1055,3 @@ void eight_channel_isr()
 {
   eight_channel_flag = 1;
 }
-
-
-
-
-
-
