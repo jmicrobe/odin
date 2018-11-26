@@ -353,9 +353,12 @@ void calibrate()
     data.adc[k + channelstart] = best_calibration_voltage;
     calibration_voltage[k + channelstart] = best_calibration_voltage;
   }
+
   write_data_to_SD_card(); // write the calibration values to the SD card in the guise of the first packet sent, this is for debugging purposes
-  sendpacket(ethernetstatus); // send the calibration values to the server via the Ethernet Shield
   delay(1000); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
+	
+  sendpacket(ethernetstatus); // send the calibration values to the server via the Ethernet Shield
+  delay(1000); // give the system a second to ensure all SPI bus operations have completed
 }
 
 
@@ -451,9 +454,10 @@ void loop() {
   }
   Serial.println("\n");
   write_data_to_SD_card(); // writes to the SD card first in case things take awhile with the WiFi
-  delay(500); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
+  delay(1000); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
   
   sendpacket(ethernetstatus); // send the data packet to the server via the Ethernet Shield
+  delay(1000); // give the system a second to ensure all SPI bus operations have completed
   
   Serial.println("Lowering Platform");
   lcd3LinePrint("Lowering the","       Platform","");
@@ -608,8 +612,10 @@ void write_data_to_SD_card()
 // Sends the data packet to the server via the Ethernet Shield
 void sendpacket(boolean on)
 {
-    Serial.println("Sending data via Ethernet.");
     if(on){
+      Serial.println("Sending data via Ethernet.");
+      lcdPrint("Sending data","via Ethernet","","");
+	    
       // the data structure was filled during the scan, now create a udp packet and send it
       udp.beginPacket(data_server_ip, data_server_port);
       udp.write((byte *)&data, PACKET_SIZE);
