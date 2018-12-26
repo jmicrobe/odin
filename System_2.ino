@@ -2,7 +2,7 @@
   Software for Optical Density INvestigator
   System 2
   Written by Jonathan Forbes
-  Last updated Nov 23, 2018 (Jessica Hardwicke)
+  Last updated Dec 26, 2018 (Jessica Hardwicke)
   Based on System 1 (ROGR) software written by Bob Petersen and David Beck
 */
 
@@ -108,7 +108,7 @@ String ram;                                    // String to store the RAM status
 
 const boolean ethernetstatus = true;           // Set to true if sending data to the server via Ethernet is desired
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };  // MAC address for device (must be unique!)
-IPAddress data_server_ip(128, 208, 236, 146);                // IP of remote host that will receive the data
+IPAddress data_server_ip(172, 28, 236, 69);                // IP of remote host that will receive the data
 const uint16_t data_server_port = 8577;                     // must be unique!
 EthernetUDP udp;                                            // UDP instance for sending & receiving
 const int PACKET_SIZE = sizeof(struct data);
