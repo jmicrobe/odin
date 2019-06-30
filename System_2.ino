@@ -101,12 +101,11 @@ volatile int eight_channel_flag = 1;           // signals that the 8-channel swi
 volatile int pause_button_flag = 1;            // Signals that the pause button has been pressed, but that event hasn't been handled by the software yet. Set to 1 so the system investigates the pause status when initially asked at system start
 boolean paused = false;                        // Keeps track of the pause state of the system.
                                                // Start the system in paused mode to let the LED's come up to temperature before calibrating and sending data to the server.
-											   // Paused = FALSE here because the pause check will assume the system is coming from an unpaused state to begin the pause
+                         // Paused = FALSE here because the pause check will assume the system is coming from an unpaused state to begin the pause
 
 boolean debug_mode;                            // Keeps track of the debug mode status of the system.
 String ram;                                    // String to store the RAM status for periodic display (for debug purposes)
 
-const boolean ethernetstatus = true;           // Set to true if sending data to the server via Ethernet is desired
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };  // MAC address for device (must be unique!)
 IPAddress data_server_ip(172, 28, 236, 69);                // IP of remote host that will receive the data
 const uint16_t data_server_port = 8577;                     // must be unique!
@@ -151,20 +150,34 @@ void setup()
     data.adc[k] = -1;
   }
   // Configure the Ethernet Shield to send UDP data packets to the server
-  if(ethernetstatus)
+  Serial.println("setup: configuring ethernet via DHCP");
+  if (Ethernet.begin(mac) == 0)
   {
-    Serial.println("setup: configuring ethernet via DHCP");
-    if (Ethernet.begin(mac) == 0)
-	{
-      Serial.println("setup: unable to configure ethernet device, halting");
-      while (1)
-      {
-        delay(1);          // infinite halt? waiting on reset button?
-      }
+    Serial.println("setup: Ethernet.begin failed, halting");
+    lcd.setCursor(0,0);
+    lcd.print("setup: Halted");
+    lcd.setCursor(0,1);
+    lcd.print("Ethernet.begin Fail");
+    lcd.setCursor(0,0);
+    while (1)
+    {
+      delay(1);          // Infinite halt. Waiting on reset button.
     }
-    Serial.print("setup: ethernet configuration complete, IP address is: ");
-    Serial.println(Ethernet.localIP());
-    udp.begin(data_server_port);
+  }
+  Serial.print("setup: ethernet configuration complete, IP address is: ");
+  Serial.println(Ethernet.localIP());
+  if (udp.begin(data_server_port) == 0)
+  {
+    Serial.println("setup: udp.begin failed, halting");
+    lcd.setCursor(0,0);
+    lcd.print("setup: Halted");
+    lcd.setCursor(0,1);
+    lcd.print("udp.begin Fail");
+    lcd.setCursor(0,0);
+    while (1)
+    {
+      delay(1);          // Infinite halt. Waiting on reset button.
+    }
   }
 
   // Pause the system, this allows the user to hold off on running the experiment before the LED's come up to temperature
@@ -186,7 +199,7 @@ void setup()
   digitalWrite(Motor_En_Pin, HIGH); // enable the motor to be controlled
 
   debug_mode = digitalRead(debug_selection_pin); // read the operation mode selector
-  if(debug_mode) // if the selector indicated debug mode, then branch off into debug operations
+  if (debug_mode) // if the selector indicated debug mode, then branch off into debug operations
   {
     detachInterrupt(1);                             // disable the pause button from interrupting throughout debug mode
     attachInterrupt(4, eight_channel_isr, RISING);  // enable the 8 channel rotary switch, which selects which tube box to provide constant output from
@@ -201,8 +214,8 @@ void setup()
     raise_platform();                               // raise the lifting platform so calibration can commence
     calibrate();                                    // calibrate the sensor channels
     lcdPrint("1:         5:       ","2:         6:       ","3:         7:       ","4:         8:       "); // sets up the static channel indicators on the LCD
-    while(1)
-	{
+    while (1)
+    {
       debug_loop();                                   // skip the rest of the normal program and run only the debug routine
     }
   }
@@ -291,7 +304,7 @@ void calibrate()
     Serial.println(k + channelstart);
     channel_select(k + channelstart); // set the multiplexer to output the voltage from the set channel
 
-	// this block outputs to the LCD the current channel being calibrated, as well as the free system RAM at that moment
+  // this block outputs to the LCD the current channel being calibrated, as well as the free system RAM at that moment
     String channel;
     channel += "Channel ";
     channel += (k + channelstart);
@@ -306,13 +319,13 @@ void calibrate()
     best_value = 100000.0; // out of bounds value to start so that the first value tested will definitely replace it
     best_calibration_voltage = 0;
 
-	// Start calibrating a channel!
-    while(!done)
-	{
+  // Start calibrating a channel!
+    while (!done)
+    {
       //Serial.print("mid: ");
       //Serial.println(mid);
       dac.setVoltage(mid, false); // set the voltage on the DAC to the midpoint value of the range
-	                              // false indicates that we don't want to set the DAC to automatically output that voltage every time it wakes up from now on
+                                // false indicates that we don't want to set the DAC to automatically output that voltage every time it wakes up from now on
       delay(20); // wait a moment to let the DAC set the voltage, and allow that voltage to propagate throughout the system of sensors
       value = adc_read(k + channelstart); // read the output voltage from this channel being investigated
       //Serial.print("low: ");
@@ -325,22 +338,22 @@ void calibrate()
       //Serial.println(value);
       //Serial.println();
       if (abs(value - 1600) < abs(best_value - 1600)) // if the output value is the closest to 1600 yet, then keep track of it as the current best
-	  {
+      {
         best_value = value;
         best_calibration_voltage = mid;
       }
       if (value > 1600) // if the output value is less than 1600, then narrow the range by only considering values above the DAC value tested
-	  {
+      {
         high = mid;
         mid = (low + high) / 2;
       }
       else // if the output value is greater than 1600, then narrow the range by only considering values below the DAC value tested
-	  {
+      {
         low = mid;
         mid = (low + high) / 2;
       }
       if (low == mid || mid == high) // if there is no more range left, then all relevant values have been considered and one will be the best
-	  {
+      {
         done = true; // end calibration for this sensor
       }
     }
@@ -349,7 +362,7 @@ void calibrate()
     Serial.print("  Best Value: ");
     Serial.println(best_value);
 
-	// set the data field for this channel as well as a separate calibration array to what was determined to be the best calibration DAC value
+    // set the data field for this channel as well as a separate calibration array to what was determined to be the best calibration DAC value
     data.adc[k + channelstart] = best_calibration_voltage;
     calibration_voltage[k + channelstart] = best_calibration_voltage;
   }
@@ -357,7 +370,7 @@ void calibrate()
   write_data_to_SD_card(); // write the calibration values to the SD card in the guise of the first packet sent, this is for debugging purposes
   delay(1000); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
 
-  sendpacket(ethernetstatus); // send the calibration values to the server via the Ethernet Shield
+  sendpacket(); // send the calibration values to the server via the Ethernet Shield
   delay(1000); // give the system a second to ensure all SPI bus operations have completed
 }
 
@@ -379,38 +392,38 @@ void debug_loop()
     dac.setVoltage(calibration_voltage[channel], false); // set the DAC to the calibration voltage for that channel
     delay(20); // short delay to allow the DAC to come to the set Voltage and allow it to propagate throughout the system
     tube_data = adc_read(channel); // read the ADC value for the set channel
-	// Write the read value to the LCD, in the proper place
+    // Write the read value to the LCD, in the proper place
     if (count == 1)
-	{
-	  lcdDebugPrint(3, 0, tube_data);
+    {
+      lcdDebugPrint(3, 0, tube_data);
     }
-	else if (count == 2)
-	{
-	  lcdDebugPrint(3, 1, tube_data);
+    else if (count == 2)
+    {
+      lcdDebugPrint(3, 1, tube_data);
     }
-	else if (count == 3)
-	{
-	  lcdDebugPrint(3, 2, tube_data);
+    else if (count == 3)
+    {
+      lcdDebugPrint(3, 2, tube_data);
     }
-	else if (count == 4)
-	{
-	  lcdDebugPrint(3, 3, tube_data);
+    else if (count == 4)
+    {
+      lcdDebugPrint(3, 3, tube_data);
     }
-	else if (count == 5)
-	{
-	  lcdDebugPrint(14, 0, tube_data);
+    else if (count == 5)
+    {
+      lcdDebugPrint(14, 0, tube_data);
     }
-	else if (count == 6)
-	{
-	  lcdDebugPrint(14, 1, tube_data);
+    else if (count == 6)
+    {
+      lcdDebugPrint(14, 1, tube_data);
     }
-	else if (count == 7)
-	{
-	  lcdDebugPrint(14, 2, tube_data);
+    else if (count == 7)
+    {
+      lcdDebugPrint(14, 2, tube_data);
     }
-	else // must be 8 then
-	{
-	  lcdDebugPrint(14, 3, tube_data);
+    else // must be 8 then
+    {
+      lcdDebugPrint(14, 3, tube_data);
     }
     count++; // go to the next channel in the tube box
     channel++; // go to the next channel in the system
@@ -434,11 +447,11 @@ void loop() {
   Serial.println(data.time);
   for (int i = 0; i < channels - channelstart; i++) // scan the channels and perform adc readings
   {
-    if (i%8==0)
-	{
+    if (i % 8 == 0)
+    {
       Serial.println("\n");
-      for(int k = i; k < i+8; k++) // this loop helps set up a matrix for easy Serial output readability
-	  {
+      for (int k = i; k < i+8; k++) // this loop helps set up a matrix for easy Serial output readability
+      {
         Serial.print(k);
         Serial.print("\t");
       }
@@ -456,8 +469,60 @@ void loop() {
   write_data_to_SD_card(); // writes to the SD card first in case things take awhile with the WiFi
   delay(1000); // give the system a second to ensure all SD Card operations have completed before potentially using the SPI bus again
 
-  sendpacket(ethernetstatus); // send the data packet to the server via the Ethernet Shield
-  delay(1000); // give the system a second to ensure all SPI bus operations have completed
+  boolean send_to_server = true; // assume we'll be able to send the data to the server until proven otherwise
+  byte ethernet_maintenance_return = Ethernet.maintain();
+  switch(ethernet_maintenance_return)
+  {
+    case 1: Serial.println("Ethernet DHCP Renewal Failed");
+            lcd3LinePrint("Ethernet DHCP","Renewal Failed","Reconfiguring");
+            delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
+            send_to_server = false;
+            break;
+    case 2: Serial.println("Ethernet DHCP Renewal Succeeded");
+            break;
+    case 3: Serial.println("Ethernet DHCP Rebind Failed");
+            lcd3LinePrint("Ethernet DHCP","Rebind Failed","Reconfiguring");
+            delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
+            send_to_server = false;
+            break;
+    case 4: Serial.println("Ethernet DHCP Rebind Succeeded");
+            break;
+  }
+  if (!send_to_server) // If the Ethernet failed, try to fix it
+  {
+    udp.stop();
+    // Reconfigure the Ethernet Shield to send UDP data packets to the server
+    Serial.println("loop: reconfiguring ethernet via DHCP");
+    if (Ethernet.begin(mac) == 0)
+    {
+      Serial.println("loop: Ethernet.begin failed, skipping write to server.");
+      lcd3LinePrint("loop: Ethernet","reconfiguration fail","Ethernet.begin fail");
+      delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
+    }
+    else
+    {
+      Serial.print("loop: ethernet reconfiguration complete, IP address is: ");
+      Serial.println(Ethernet.localIP());
+      if (udp.begin(data_server_port) == 0)
+      {
+        Serial.println("loop: udp.begin failed, skipping write to server.");
+        lcd3LinePrint("loop: Ethernet","reconfiguration fail","udp.begin fail");
+        delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
+      }
+      else
+      {
+        lcd3LinePrint("loop: Ethernet","reconfiguration","success");
+        delay(1500); // delay so that the LCD message will get noticed (user info regarding successful reconfiguration)
+      }
+    }
+  }
+
+  if (send_to_server)
+  {
+    sendpacket(); // send the data packet to the server via the Ethernet Shield
+  }
+  
+  delay(1500); // give the system a some time to ensure all SPI bus operations have completed, and that error messages can be read
 
   Serial.println("Lowering Platform");
   lcd3LinePrint("Lowering the","       Platform","");
@@ -476,24 +541,24 @@ void loop() {
   unsigned long scan_end_time = millis(); // record the system time when sampling operations were complete
 
   // shake while the system time is less than the time recorded at the end of the last sampling run, plus the data interval, minus the time it takes to sample the data
-  while(millis() < (scan_end_time + (timestep - scan_time)))
+  while (millis() < (scan_end_time + (timestep - scan_time)))
   {
     checkFourChannelFlag(); // check to see if a new data sampling interval has been set
     //checkPauseButton(); // check to see if the pause button has been pressed
 
-	/*
-	// System pause loop, shuts down the shaker table, and waits for the pause button to be pressed again
+  /*
+  // System pause loop, shuts down the shaker table, and waits for the pause button to be pressed again
     if (paused)
-	{
+    {
       digitalWrite(relay_pin, LOW); // turn off the shaker (didn't call shaker_stop() because we want to pause before waiting for the shaker to stop
       shaker_shaking = false; // let the system know the shaker table has been turned off (since we didn't use shaker_stop()
       system_pause();  // pause the system until the pause button is pressed again
       shaker_start();  // start the shaker table back up again
     }
     delay(100); // wait a small moment so the LCD doesn't flash so fast it is unreadable...
-	*/
+  */
 
-	// Output the remaining time to the display, which is in milliseconds
+  // Output the remaining time to the display, which is in milliseconds
     String lcd_loop_first_line = "";
     lcd_loop_first_line += "Interval Mins: ";
     lcd_loop_first_line += (timestep/60000); // Display the interval time in minutes
@@ -518,24 +583,24 @@ int adc_read(int channel)
   for (unsigned int k = 0; k < adc_samples; k++) // take as many readings as specified by the constant "adc_samples", extra readings are sometimes required in order to smooth out anomolous readings
   {
     if (channel / 8 < 4)        // determine which of the two ADC chips to read, and which channel on those chips to read for each of the tubes being read
-	{
+    {
       current_read = ads1_4.readADC_SingleEnded(channel / 8);
     }
-	else
-	{
+    else
+    {
       current_read = ads5_8.readADC_SingleEnded((channel - 32) / 8);
     }
     /*
     if (current_read > high) {  // If the current reading for this tube sample is higher than the highest for this tube sample, then replace the highest with this reading
-     high = current_read;
-     }
-     if (current_read < low) {   // If the current reading for this tube sample is higher than the highest for this tube sample, then replace the highest with this reading
-     low = current_read;
-     }
-     */
+      high = current_read;
+    }
+    if (current_read < low) {   // If the current reading for this tube sample is higher than the highest for this tube sample, then replace the highest with this reading
+      low = current_read;
+    }
+    */
     a = a + current_read;       // sum all the readings for each tube, during this sampling together
   }
-  a = a/adc_samples;            // divide the accumulated sum by the number of readings taken, to compute an average
+  a = a / adc_samples;            // divide the accumulated sum by the number of readings taken, to compute an average
   /*
   Serial.print("High: ");
   Serial.print(high);
@@ -561,7 +626,7 @@ void write_data_to_SD_card()
 
     // if the file opened okay, write to it:
     if (myFile)
-	{
+    {
       Serial.print("Writing to ");
       Serial.print(filename);
       Serial.print("...");
@@ -583,11 +648,11 @@ void write_data_to_SD_card()
       myFile.print(data.time);        // write the experiment time (in milliseconds) to the file
       myFile.print(",");              // print the comma separation
       for (int i = 0; i < 64; i++)
-	  {
+      {
         myFile.print(data.adc[i]);    // write the channel data to the file
         myFile.print(",");            // print the comma separation
       }
-      myFile.println();	//write a line ending so that the next data sampling to be written ends up on a new line
+      myFile.println();  //write a line ending so that the next data sampling to be written ends up on a new line
       myFile.close(); // close the file:
       Serial.println("done.");
       lcdPrint("Done.","","","");
@@ -604,23 +669,34 @@ void write_data_to_SD_card()
   else
   {
     Serial.println("SD Card write-protected or missing or was either at system start, skipping write to SD Card");
-	lcdPrint("Skipping Write to SD","Card","","");
-	delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
+    lcdPrint("Skipping Write to SD","Card","","");
+    delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
   }
 }
 
 // Sends the data packet to the server via the Ethernet Shield
-void sendpacket(boolean on)
+void sendpacket()
 {
-    if(on){
-      Serial.println("Sending data via Ethernet.");
-      lcdPrint("Sending data","via Ethernet","","");
+  Serial.println("Sending data via Ethernet.");
+  lcdPrint("Sending data","via Ethernet","","");
 
-      // the data structure was filled during the scan, now create a udp packet and send it
-      udp.beginPacket(data_server_ip, data_server_port);
-      udp.write((byte *)&data, PACKET_SIZE);
-      udp.endPacket();
+  // the data structure was filled during the scan, now create a udp packet and send it
+  if (udp.beginPacket(data_server_ip, data_server_port) == 0)
+  {
+    Serial.println("Ethernet sendpacket error: udp.beginPacket failed, skipping packet send.");
+    lcdPrint("Ethernet Problem","udp.beginPacket Fail","Skipping Packet","Sending to Server");
+    delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
+  }
+  else
+  {
+    udp.write((byte *)&data, PACKET_SIZE);
+    if (udp.endPacket() == 0)
+    {
+      Serial.println("Ethernet sendpacket error: udp.endPacket failed, skipping packet send.");
+      lcdPrint("Ethernet Problem","udp.endPacket Fail","Skipping Packet","Sending to Server");
+      delay(1500); // delay so that the LCD message will get noticed (if it's a problem for the user)
     }
+  }
 }
 
 // Turns off the relay, which in turn shuts off the shaker table, also waits until the shaker table comes to a rest
@@ -652,7 +728,7 @@ void raise_platform()
 
   actuator_position = analogRead(A2); // read the actuator position
   motor_run_time = millis(); // save the time when the motor started extending
-  while((millis() - motor_run_time) < 120000)  // run motor until 120 seconds has elapsed (to clear bubbles)
+  while ((millis() - motor_run_time) < 120000)  // run motor until 120 seconds has elapsed (to clear bubbles)
   {
     actuator_position = analogRead(A2); // read the actuator position
     actuator_current = analogRead(A3); // read the current going to the motor
@@ -660,7 +736,7 @@ void raise_platform()
     {
       digitalWrite(Motor_En_Pin, LOW); // disable the motor
       lcdPrint("OBSTRUCTION!!!","","","");
-      while(1){} // pause forever (there needs to be programmed a way to gracefully recover from this situation)
+      while (1) {} // pause forever (there needs to be programmed a way to gracefully recover from this situation)
     }
   }
   digitalWrite(Motor_En_Pin, LOW); // disable the motor
@@ -679,7 +755,7 @@ void lower_platform()
 
   actuator_position = analogRead(A2); // read the actuator position
   motor_run_time = millis(); // save the time when the motor started extending
-  while((millis() - motor_run_time) < 20000)  // run motor until 20 seconds has elapsed (to park it before enabling the shaker table)
+  while ((millis() - motor_run_time) < 20000)  // run motor until 20 seconds has elapsed (to park it before enabling the shaker table)
   {
     actuator_position = analogRead(A2); // read the actuator position
     actuator_current = analogRead(A3); // read the current going to the motor
@@ -687,7 +763,7 @@ void lower_platform()
     {
       digitalWrite(Motor_En_Pin, LOW); // disable the motor
       lcdPrint("OBSTRUCTION!!!","","","");
-      while(1){} // pause forever (there needs to be programmed a way to gracefully recover from this situation)
+      while (1){} // pause forever (there needs to be programmed a way to gracefully recover from this situation)
     }
   }
   digitalWrite(Motor_En_Pin, LOW); // disable the motor
@@ -795,7 +871,7 @@ void lcdDebugPrint(int column, int row, int data)
 // Returns up to the first 20 characters of the passed String
 String trimStringEndToTwentyChars(String msg)
 {
-  if(msg.length() > 20)
+  if (msg.length() > 20)
   {
     msg.remove(20);
   }
@@ -806,9 +882,9 @@ String trimStringEndToTwentyChars(String msg)
 String fillStringEndWithVariableWhitespace(String msg, int desired_length)
 {
   int string_length = msg.length();
-  if(string_length < desired_length)
+  if (string_length < desired_length)
   {
-    for(int i = 0; i < desired_length - string_length; i++)
+    for (int i = 0; i < desired_length - string_length; i++)
     {
       msg += " ";
     }
@@ -834,18 +910,18 @@ void initializeSDCardFile()
     Serial.print("Initializing SD card...");
     lcdPrint("Initializing","SD card...","","");
     if (!SD.begin(10,11,12,13)) // start communicating with the SD Card (Put these "magic numbers" up top where they belong!)
-	{
+    {
       Serial.println("SD Card initialization failed!");
       lcdPrint("initialization","failed!","","");
     }
     else
-	{
+    {
       Serial.println("initialization done.");
       lcdPrint("initialization done.","","","");
 
       DateTime now = rtc.now(); // Get the current Date/Time as perceived by the real-time-clock
 
-	  // Convert the Date/Time into a filename
+      // Convert the Date/Time into a filename
       String time_date_stamp;
       time_date_stamp += now.month();
       time_date_stamp += "M";
@@ -862,11 +938,11 @@ void initializeSDCardFile()
       time_date_temp_check += "        ";
       lcdPrint("Checking if",time_date_temp_check,"exists already.","");
 
-      if(SD.exists(temp_filename_check)) // check to see if the filename is present already on the SD Card
+      if (SD.exists(temp_filename_check)) // check to see if the filename is present already on the SD Card
       {
         Serial.println("Filename Found!");
         lcdPrint("Filename Found!","","","");
-        for(int i = 1; i < 100; i++) // assumption that there will be fewer than 100 new files created in a day (just one probably, maybe a couple (of course more during testing!))
+        for (int i = 1; i < 100; i++) // assumption that there will be fewer than 100 new files created in a day (just one probably, maybe a couple (of course more during testing!))
         {
           time_date_temp_check = time_date_stamp;
           time_date_temp_check += i;
@@ -876,12 +952,12 @@ void initializeSDCardFile()
           Serial.print(temp_filename_check);
           Serial.println(" exists already.");
           lcdPrint("Checking if",time_date_temp_check,"exists already.","");
-          if(!SD.exists(temp_filename_check))
+          if (!SD.exists(temp_filename_check))
           {
             break;
           }
         }
-		// Should make a FAILURE state here for when every option is already on the card, something that tells the system not to write to the SD card, or maybe starts using lowercase letters???
+        // Should make a FAILURE state here for when every option is already on the card, something that tells the system not to write to the SD card, or maybe starts using lowercase letters???
         Serial.print("Going with ");
         Serial.println(temp_filename_check);
         lcdPrint("Going with",time_date_temp_check,"","");
@@ -919,16 +995,16 @@ void pause_button_interrupt_service_routine()
 // If the pause flag is set, pauses the system if it was unpaused, and unpauses the system if it was paused
 void checkPauseButton()
 {
-  if(pause_button_flag == 1) // if the pause flag is set
+  if (pause_button_flag == 1) // if the pause flag is set
   {
-    if(paused) // if the system was paused
+    if (paused) // if the system was paused
     {
       set_LCD_Color(normal_backlight); // return the LCD backlight to normal
       digitalWrite(35, LOW); // turn off the PAUSE button LED
       lcd.setCursor(0,3);
       lcd.print("          "); // remove the PAUSED message from the LCD
       lcd.setCursor(0,0);
-	  paused = false; // set the system to unpaused
+      paused = false; // set the system to unpaused
     }
     else // if the system was unpaused
     {
@@ -937,19 +1013,19 @@ void checkPauseButton()
       lcd.setCursor(0,3);
       lcd.print("PAUSED    "); // display the PAUSED message on the LCD
       lcd.setCursor(0,0);
-	  paused = true; // set the system to PAUSED
+      paused = true; // set the system to PAUSED
     }
-	delay(100);            // Some extra debouncing (pause button is REALLY susceptible to this, even with the debounce chip.
-                           // Sometimes an uncaught button bounce would cause the flag to set after the pause, resulting in the sampling loop to begin paused.
-						   // This would cause problems for the user if they walked away before the system started shaking, it could be paused without them realizing it.
-	pause_button_flag = 0; // unset the pause flag
+  delay(100); // Some extra debouncing (pause button is REALLY susceptible to this, even with the debounce chip.
+              // Sometimes an uncaught button bounce would cause the flag to set after the pause, resulting in the sampling loop to begin paused.
+              // This would cause problems for the user if they walked away before the system started shaking, it could be paused without them realizing it.
+  pause_button_flag = 0; // unset the pause flag
   }
 }
 
 // Halts system activity until the pause button is pressed, if the system is in a paused state
 void system_pause()
 {
-  while(paused) // while the system is paused
+  while (paused) // while the system is paused
   {
     checkPauseButton(); // keep checking if the pause button has been pressed
     delay(100); // not sure what I was trying to avoid here with this delay...
@@ -976,22 +1052,22 @@ void resume_normal_mode()         // returns the system from critical mode, re-e
 // Checks the 4-ch rotary knob and sets the data interval to what is set by the knob, if the four_channel_flag is set
 void checkFourChannelFlag()
 {
-  if(four_channel_flag == 1) // if the flag was set (by the 4-ch interrupt)
+  if (four_channel_flag == 1) // if the flag was set (by the 4-ch interrupt)
   {
     four_channel_flag = 0; // reset the flag
     int voltage = analogRead(A0); // read the voltage from the 4-ch rotary switch voltage ladder
-	// Determine the interval set by the voltage read, set the timestep to the correct interval and display the interval (in minutes) on the LCD
-    if(voltage < 825)
+    // Determine the interval set by the voltage read, set the timestep to the correct interval and display the interval (in minutes) on the LCD
+    if (voltage < 825)
     {
       timestep = data_sampling_interval_4 * 60000;
       lcd3LinePrint("Interval", String(data_sampling_interval_4), "");
     }
-    else if(voltage < 905)
+    else if (voltage < 905)
     {
       lcd3LinePrint("Interval", String(data_sampling_interval_3), "");
       timestep = data_sampling_interval_3 * 60000;
     }
-    else if(voltage < 984)
+    else if (voltage < 984)
     {
       lcd3LinePrint("Interval", String(data_sampling_interval_2), "");
       timestep = data_sampling_interval_2 * 60000;
@@ -1009,31 +1085,31 @@ void checkEightChannelFlag()
 {
   int voltage = analogRead(A1); // read the voltage from the 8-ch rotary switch voltage ladder
   // Determine the tube box set by the voltage read, set the tube box to be interrogated by the debug loop to the one set by the user
-  if(voltage < 906)
+  if (voltage < 906)
   {
     eight_position_channel = 8;
   }
-  else if(voltage < 924)
+  else if (voltage < 924)
   {
     eight_position_channel = 7;
   }
-  else if(voltage < 942)
+  else if (voltage < 942)
   {
     eight_position_channel = 6;
   }
-  else if(voltage < 960)
+  else if (voltage < 960)
   {
     eight_position_channel = 5;
   }
-  else if(voltage < 978)
+  else if (voltage < 978)
   {
     eight_position_channel = 4;
   }
-  else if(voltage < 997)
+  else if (voltage < 997)
   {
     eight_position_channel = 3;
   }
-  else if(voltage < 1015)
+  else if (voltage < 1015)
   {
     eight_position_channel = 2;
   }
